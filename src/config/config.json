@@ -4,7 +4,12 @@
     "password": null,
     "database": "webbanhang",
     "host": "127.0.0.1",
-    "dialect": "mysql"
+    "dialect": "mysql",
+    "logging": false,
+    "query": {
+      "raw": false
+    },
+    "timezone": "+07:00"
   },
   "test": {
     "username": "root",
