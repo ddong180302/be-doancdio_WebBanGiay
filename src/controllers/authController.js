@@ -1,6 +1,3 @@
-
-import authService from "../services/authService";
-import express from "express";
 import db from '../models';
 import bcrypt from 'bcryptjs';
 import jwt from 'jsonwebtoken';
@@ -299,6 +296,7 @@ const login = async (req, res) => {
                             phone: user.phone,
                             fullName: user.fullName,
                             role: user.role,
+                            avatar: user.image
                         },
                     }
                     res.status(201).json({
