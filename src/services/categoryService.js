@@ -4,15 +4,85 @@ import { Op, where } from 'sequelize';
 require('dotenv').config();
 import jwt from 'jsonwebtoken';
 
-const getAllUserPaginate = ({ current, pageSize, order, fullName, role, email, phone, address, ...query }) => {
+const createNewCategory = (name) => {
+    return new Promise(async (resolve, reject) => {
+        try {
+            if (!name) {
+                resolve({
+                    statusCode: 400,
+                    message: "Chưa nhập tên danh mục cần tạo",
+                })
+            } else {
+                const category = await db.Category.create({
+                    name: name
+                })
+
+                if (category) {
+                    resolve({
+                        statusCode: 200,
+                        message: "",
+                        data: {
+                            name: category.name
+                        }
+                    })
+                }
+            }
+        } catch (error) {
+            reject(e);
+        }
+    })
+}
+
+const getAllCategory = (token) => {
+    return new Promise(async (resolve, reject) => {
+        try {
+            if (token) {
+                const access_token = token.split(" ")[1];
+                let decoded = jwt.verify(access_token, process.env.JWT_ACCESS_SECRET);
+                if (decoded) {
+                    let data = await db.Category.findAll({
+                        order: [['id', 'DESC']],
+                        attributes: {
+                            exclude: [
+                                "deleted_at",
+                            ]
+                        },
+                        raw: false,
+                        nest: true
+                    })
+                    if (!data) data = {};
+                    resolve({
+                        statusCode: 200,
+                        message: "",
+                        data: data
+                    })
+                } else {
+                    resolve({
+                        statusCode: 401,
+                        message: "Bạn Cần Access Token để truy cập APIs - Unauthorized (Token hết hạn, hoặc không hợp lệ, hoặc không truyền access token)",
+                        error: "Unauthorized"
+                    })
+                }
+            } else {
+                resolve({
+                    statusCode: 401,
+                    message: "Bạn Cần Access Token để truy cập APIs - Unauthorized (Token hết hạn, hoặc không hợp lệ, hoặc không truyền access token)",
+                    error: "Unauthorized"
+                })
+            }
+        } catch (e) {
+            reject(e);
+        }
+    })
+}
+
+const getAllCategoryPaginate = ({ current, pageSize, order, name, createdAt, updatedAt, ...query }) => {
     return new Promise(async (resolve, reject) => {
         try {
             const queries = {
                 raw: true, nest: true, attributes: {
                     exclude: [
-                        "password",
                         "deleted_at",
-                        "refresh_token",
                     ]
                 },
             };
@@ -22,42 +92,31 @@ const getAllUserPaginate = ({ current, pageSize, order, fullName, role, email, p
             if (limit) queries.limit = limit;
             if (order) queries.order = [[order.split(' ')[0], order.split(' ')[1]]];
             const where = {};
-            if (fullName) {
-                where.fullName = {
-                    [Op.substring]: fullName
+            if (name) {
+                where.name = {
+                    [Op.substring]: name
                 };
             }
-            if (role) {
-                where.role = {
-                    [Op.substring]: role
-                };
-            }
-
-            if (email) {
-                where.email = {
-                    [Op.substring]: email
+            if (createdAt) {
+                where.createdAt = {
+                    [Op.substring]: createdAt
                 };
             }
 
-            if (phone) {
-                where.phone = {
-                    [Op.substring]: phone
+            if (updatedAt) {
+                where.updatedAt = {
+                    [Op.substring]: updatedAt
                 };
             }
 
-            if (address) {
-                where.address = {
-                    [Op.substring]: address
-                };
-            }
-            let users = await db.User.findAll({
+            let categories = await db.Category.findAll({
                 ...queries,
                 where: {
                     ...query,
                     ...where,
                 },
             });
-            const total = await db.User.count();
+            const total = await db.Category.count();
             const pages = Math.ceil(total / pageSize); // Tổng số trang
             const meta = {
                 current: +current,
@@ -65,16 +124,8 @@ const getAllUserPaginate = ({ current, pageSize, order, fullName, role, email, p
                 pages: pages,
                 total: total
             };
-            if (users) {
-                for (let i = 0; i < users.length; i++) {
-                    if (users[i].image) {
-                        users[i].image = await new Buffer.from(users[i].image, 'binary').toString('base64');
-                    } else {
-                        users[i].image = '';
-                    }
-                }
-            }
-            let result = users;
+
+            let result = categories;
             resolve({
                 statusCode: 200,
                 message: "",
@@ -89,48 +140,27 @@ const getAllUserPaginate = ({ current, pageSize, order, fullName, role, email, p
     })
 }
 
-const updateUser = (token, id, fullName, phone) => {
+const updateCategory = (name) => {
     return new Promise(async (resolve, reject) => {
         try {
-            if (token) {
-                const access_token = token.split(" ")[1];
-                let decoded = jwt.verify(access_token, process.env.JWT_ACCESS_SECRET);
-                if (!decoded) {
-                    resolve({
-                        statusCode: 401,
-                        message: "Bạn Cần Access Token để truy cập APIs - Unauthorized (Token hết hạn, hoặc không hợp lệ, hoặc không truyền access token)",
-                        error: "Unauthorized"
-                    })
-                }
-            }
-            else {
-                resolve({
-                    statusCode: 401,
-                    message: "Bạn Cần Access Token để truy cập APIs - Unauthorized (Token hết hạn, hoặc không hợp lệ, hoặc không truyền access token)",
-                    error: "Unauthorized"
-                })
-            }
-            if (!id || !fullName || !phone) {
+            if (!name) {
                 resolve({
                     statusCode: 400,
                     message: "Không truyền đủ tham số"
                 })
             }
-            let user = await db.User.update({
-                fullName: fullName,
-                phone: phone
+            let category = await db.Category.update({
+                name: name
             }, {
                 where: {
                     id: id
                 }
             });
             let data = {
-                id: user.id,
-                email: user.email,
-                fullName: user.fullName,
-                phone: user.fullName
+                id: category.id,
+                name: category.name
             }
-            if (user) {
+            if (category) {
                 resolve({
                     statusCode: 200,
                     message: "",
@@ -148,7 +178,7 @@ const updateUser = (token, id, fullName, phone) => {
     })
 }
 
-let deleteUser = (token, id) => {
+let deleteCategory = (token, id) => {
     return new Promise(async (resolve, reject) => {
         try {
             if (token) {
@@ -174,18 +204,18 @@ let deleteUser = (token, id) => {
                     message: "Không truyền đủ tham số"
                 })
             }
-            let user = await db.User.findOne({
+            let category = await db.Category.findOne({
                 where: { id: id }
             })
 
-            if (!user) {
+            if (!category) {
                 resolve({
                     statusCode: 400,
-                    message: `the user isn't exist`
+                    message: `the category isn't exist`
                 })
             }
 
-            await db.User.destroy({
+            await db.Category.destroy({
                 where: {
                     id: id
                 }
@@ -205,7 +235,10 @@ let deleteUser = (token, id) => {
 }
 
 module.exports = {
-    getAllUserPaginate,
-    updateUser,
-    deleteUser,
+    createNewCategory,
+    getAllCategory,
+    getAllCategoryPaginate,
+    updateCategory,
+    deleteCategory
+
 }

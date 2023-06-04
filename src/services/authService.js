@@ -1,6 +1,6 @@
-import express from "express";
 import db from '../models';
 import bcrypt from 'bcryptjs';
+import { response } from 'express';
 import jwt from 'jsonwebtoken';
 import { v4 as uuidv4 } from 'uuid';
 require('dotenv').config()
@@ -245,7 +245,7 @@ const login = async (email, password) => {
                     raw: true
                 });
                 if (user) {
-                    let check = await bcrypt.compareSync(password, user.password)
+                    let check = bcrypt.compareSync(password, user.password)
                     if (check) {
                         const access_token = jwt.sign({
                             email: user.email,
@@ -268,7 +268,7 @@ const login = async (email, password) => {
                             expiresIn: "1d"
                         })
 
-                        await res.cookie("refresh_token", refresh_token, {
+                        await resolve.cookie("refresh_token", refresh_token, {
                             httpOnly: true,
                             secure: false,
                             path: "/",
@@ -291,12 +291,9 @@ const login = async (email, password) => {
                                 phone: user.phone,
                                 fullName: user.fullName,
                                 role: user.role,
+                                avatar: user.image
                             }
                         }
-
-                        // if (delay) {
-                        //     await new Promise(resolve => setTimeout(resolve, delay));
-                        // }
                         resolve({
                             statusCode: 201,
                             message: "",
@@ -354,6 +351,11 @@ const getAccount = (token) => {
                     },
                     raw: true
                 });
+                if (user && user.image) {
+                    user.image = await new Buffer.from(user.image, 'binary').toString('base64');
+                } else {
+                    user.image = '';
+                }
                 if (user) {
                     resolve({
                         statusCode: 200,
@@ -423,9 +425,110 @@ const logout = (token) => {
     })
 }
 
+const refresh = (token) => {
+    return new Promise(async (resovle, reject) => {
+        try {
+            if (token) {
+                let refresh_token = token.substring('refresh_token='.length);
+                if (!refresh_token) {
+                    resovle({
+                        statusCode: 401,
+                        message: "Bạn Cần Access Token để truy cập APIs - Unauthorized (Token hết hạn, hoặc không hợp lệ, hoặc không truyền access token)",
+                        error: "Unauthorized"
+                    })
+                }
+                let decoded = jwt.verify(refresh_token, process.env.JWT_REFRESH_SECRET);
+
+                if (!decoded) {
+                    resovle({
+                        statusCode: 402,
+                        message: "Bạn Cần Access Token để truy cập APIs - Unauthorized (Token hết hạn, hoặc không hợp lệ, hoặc không truyền access token)",
+                        error: "Unauthorized"
+                    })
+                } else {
+                    let user = await db.User.findOne({
+                        where: {
+                            email: decoded.email,
+                            refresh_token: refresh_token
+                        },
+                        raw: true
+                    });
+                    if (user) {
+                        const access_token = jwt.sign({
+                            email: user.email,
+                            phone: user.phone,
+                            fullName: user.fullName,
+                            role: user.role,
+                            sub: user.id
+                        },
+                            process.env.JWT_ACCESS_SECRET, {
+                            expiresIn: "10h"
+                        })
+                        const refresh_token = jwt.sign({
+                            email: user.email,
+                            phone: user.phone,
+                            fullName: user.fullName,
+                            role: user.role,
+                        },
+                            process.env.JWT_REFRESH_SECRET, {
+                            expiresIn: "1d"
+                        })
+
+                        response.cookie("refresh_token", refresh_token, {
+                            httpOnly: true,
+                            secure: false,
+                            path: "/",
+                            sameSite: "strict",
+                        })
+
+                        await db.User.update({
+                            refresh_token: refresh_token
+                        }, {
+                            where: {
+                                email: decoded.email
+                            }
+                        });
+
+                        const data = {
+                            access_token: access_token,
+                            user: {
+                                id: user.id,
+                                email: user.email,
+                                phone: user.phone,
+                                fullName: user.fullName,
+                                role: user.role,
+                            }
+                        }
+                        resovle({
+                            statusCode: 200,
+                            message: "",
+                            data: data
+                        })
+                    } else {
+                        resovle({
+                            statusCode: 402,
+                            message: "Bạn Cần Access Token để truy cập APIs - Unauthorized (Token hết hạn, hoặc không hợp lệ, hoặc không truyền access token)",
+                            error: "Unauthorized"
+                        })
+                    }
+                }
+            } else {
+                resovle({
+                    statusCode: 400,
+                    message: "Không tồn tại refresh_token ở cookies. Please do login again.",
+                    error: "Unauthorized"
+                })
+            }
+        } catch (e) {
+            reject(e);
+        }
+    })
+}
+
 module.exports = {
     register,
     login,
     getAccount,
-    logout
+    logout,
+    refresh
 }
