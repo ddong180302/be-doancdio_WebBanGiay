@@ -4,8 +4,11 @@ import authController from "../controllers/authController";
 import verifyToken from "../middlewares/verifyToken";
 import userController from "../controllers/userController";
 import categoryController from "../controllers/categoryController";
+import productController from "../controllers/productController";
+import galeryController from "../controllers/galeryController";
+const multer = require('multer');
 
-
+const upload = multer();
 
 let initWebRoutes = (app) => {
 
@@ -35,6 +38,22 @@ let initWebRoutes = (app) => {
     router.put('/api/v1/category/update', categoryController.updateCategory);
     router.delete('/api/v1/category/delete/:id', categoryController.deleteCategory);
 
+
+    //manage product
+    router.get('/api/v1/product/get-all', productController.getAllProduct);
+    router.get('/api/v1/product/get-all-paginate', productController.getAllProductPaginate);
+    router.post('/api/v1/product/create-new-product', upload.single('image'), productController.createNewProduct);
+    //router.post('/api/v1/category/bulk-create', userController.bulkCreate);
+    router.put('/api/v1/product/update', productController.updateProduct);
+    router.delete('/api/v1/product/delete/:id', productController.deleteProduct);
+    router.get('/api/v1/detail-product/:id', productController.getDetailProductById);
+
+
+
+    //manage galery
+    router.post('/api/v1/galery/create-new-galery', upload.single('image'), galeryController.createNewGalery);
+    router.get('/api/v1/galery/get-all', galeryController.getAllGalery);
+    router.put('/api/v1/galery/update', galeryController.updateGalery);
 
     return app.use("/", router);
 }
