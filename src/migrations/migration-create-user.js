@@ -23,7 +23,7 @@ module.exports = {
       password: {
         type: Sequelize.STRING
       },
-      image: {
+      avatar: {
         type: Sequelize.BLOB('long')
       },
       role: {

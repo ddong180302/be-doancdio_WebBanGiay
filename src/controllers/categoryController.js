@@ -35,9 +35,8 @@ const createNewCategory = async (req, res) => {
 }
 
 const getAllCategory = async (req, res) => {
-    const token = req.headers.authorization;
     try {
-        const response = await categoryService.getAllCategory(token);
+        const response = await categoryService.getAllCategory();
         return res.status(200).json(response);
     }
     catch (e) {

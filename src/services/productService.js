@@ -4,10 +4,10 @@ import { Op, where } from 'sequelize';
 require('dotenv').config();
 import jwt from 'jsonwebtoken';
 
-const createNewProduct = (category_id, title, price, discount, description, image) => {
+const createNewProduct = (category_id, name, price, quantity, sold, thumbnail) => {
     return new Promise(async (resolve, reject) => {
         try {
-            if (!category_id || !title || !price || !discount || !description || !image) {
+            if (!category_id || !name || !price || !quantity || !sold || !thumbnail) {
                 resolve({
                     statusCode: 400,
                     message: "Chưa nhập đủ tham số",
@@ -15,11 +15,11 @@ const createNewProduct = (category_id, title, price, discount, description, imag
             } else {
                 const product = await db.Product.create({
                     category_id: category_id,
-                    title: title,
+                    name: name,
                     price: price,
-                    discount: discount,
-                    description: description,
-                    image: image
+                    quantity: quantity,
+                    sold: sold,
+                    thumbnail: thumbnail
                 })
 
                 if (product) {
@@ -28,10 +28,10 @@ const createNewProduct = (category_id, title, price, discount, description, imag
                         message: "",
                         data: {
                             category_id: category_id,
-                            title: title,
+                            name: name,
                             price: price,
-                            discount: discount,
-                            description: description,
+                            quantity: quantity,
+                            sold: sold
                         }
                     })
                 }
@@ -57,10 +57,10 @@ const getAllProduct = () => {
                 nest: true
             })
             for (let i = 0; i < data.length; i++) {
-                if (data[i].image) {
-                    data[i].image = await new Buffer.from(data[i].image, 'binary').toString('base64');
+                if (data[i].thumbnail) {
+                    data[i].thumbnail = await new Buffer.from(data[i].thumbnail, 'binary').toString('base64');
                 } else {
-                    data[i].image = '';
+                    data[i].thumbnail = '';
                 }
             }
             if (!data) data = {};
@@ -76,7 +76,7 @@ const getAllProduct = () => {
     })
 }
 
-const getAllProductPaginate = ({ current, pageSize, order, category_id, title, price, discount, description, createdAt, updatedAt, ...query }) => {
+const getAllProductPaginate = ({ current, pageSize, order, category_id, name, price, quantity, sold, createdAt, updatedAt, ...query }) => {
     return new Promise(async (resolve, reject) => {
         try {
             const queries = {
@@ -99,9 +99,9 @@ const getAllProductPaginate = ({ current, pageSize, order, category_id, title, p
                     [Op.in]: categoryIdList
                 };
             }
-            if (title) {
-                where.title = {
-                    [Op.substring]: title
+            if (name) {
+                where.name = {
+                    [Op.substring]: name
                 };
             }
             const priceRange = price;
@@ -112,22 +112,15 @@ const getAllProductPaginate = ({ current, pageSize, order, category_id, title, p
                 };
             }
 
-            if (discount) {
-                where.discount = {
-                    [Op.substring]: discount
+            if (quantity) {
+                where.quantity = {
+                    [Op.substring]: quantity
                 };
             }
 
-
-            if (description) {
-                where.description = {
-                    [Op.substring]: description
-                };
-            }
-
-            if (description) {
-                where.description = {
-                    [Op.substring]: description
+            if (sold) {
+                where.sold = {
+                    [Op.substring]: sold
                 };
             }
 
@@ -161,12 +154,27 @@ const getAllProductPaginate = ({ current, pageSize, order, category_id, title, p
 
             let result = product;
             for (let i = 0; i < result.length; i++) {
-                if (result[i].image) {
-                    result[i].image = await new Buffer.from(result[i].image, 'binary').toString('base64');
+                if (result[i].thumbnail) {
+                    result[i].thumbnail = await new Buffer.from(result[i].thumbnail, 'binary').toString('base64');
                 } else {
-                    result[i].image = '';
+                    result[i].thumbnail = '';
                 }
             }
+
+            for (let i = 0; i < result.length; i++) {
+                if (result[i].category_id) {
+                    let name = await db.Category.findOne({
+                        where: {
+                            id: result[i].category_id
+                        }
+                    })
+                    if (name)
+                        result[i].category_id = name.name
+                } else {
+                    result[i].category_id = '';
+                }
+            }
+
             resolve({
                 statusCode: 200,
                 message: "",
@@ -181,30 +189,39 @@ const getAllProductPaginate = ({ current, pageSize, order, category_id, title, p
     })
 }
 
-const updateProduct = (title, price, description) => {
+const updateProduct = (id, name, price, quantity, thumbnail) => {
     return new Promise(async (resolve, reject) => {
         try {
-            if (!title || !price || !description) {
+            if (!id || !name || !price || !quantity) {
                 resolve({
                     statusCode: 400,
                     message: "Không truyền đủ tham số"
                 })
             }
-            let product = await db.Product.update({
-                title: title,
-                price: price,
-                description: description
-            }, {
+
+            let product = await db.Product.findOne({
                 where: {
                     id: id
                 }
-            });
-            let data = {
-                title: product.title,
-                price: product.price,
-                description: product.description
+            })
+            if (product) {
+                await db.Product.update({
+                    name: name,
+                    price: price,
+                    quantity: quantity,
+                    thumbnail: thumbnail
+                }, {
+                    where: {
+                        id: id
+                    }
+                });
             }
-            if (category) {
+            let data = {
+                name: product.name,
+                price: product.price,
+                quantity: product.quantity
+            }
+            if (product) {
                 resolve({
                     statusCode: 200,
                     message: "",
@@ -294,11 +311,11 @@ let getDetailProductById = (id) => {
                 raw: true,
                 nest: true
             })
-            if (dataProduct && dataProduct.image) {
-                dataProduct.image = await new Buffer.from(dataProduct.image, 'binary').toString('base64');
+            if (dataProduct && dataProduct.thumbnail) {
+                dataProduct.thumbnail = await new Buffer.from(dataProduct.thumbnail, 'binary').toString('base64');
             }
 
-            let dataGalery = await db.Galery.findAll({
+            let dataGallery = await db.Gallery.findAll({
                 where: {
                     product_id: id
                 },
@@ -306,22 +323,24 @@ let getDetailProductById = (id) => {
                 raw: true,
                 nest: true
             })
-            if (dataGalery) {
-                for (let i = 0; i < dataGalery.length; i++) {
-                    if (dataGalery[i].image) {
-                        dataGalery[i].image = await new Buffer.from(dataGalery[i].image, 'binary').toString('base64');
+            if (dataGallery) {
+                for (let i = 0; i < dataGallery.length; i++) {
+                    if (dataGallery[i].image) {
+                        dataGallery[i].image = await new Buffer.from(dataGallery[i].image, 'binary').toString('base64');
                     } else {
-                        dataGalery[i].image = '';
+                        dataGallery[i].image = '';
                     }
                 }
             }
             const data = {
-                dataProduct: dataProduct,
-                dataGalery: dataGalery
+                dataProduct,
+                dataGallery
             }
 
             resolve({
-                data: data
+                statusCode: 200,
+                message: '',
+                data
             })
 
         } catch (e) {

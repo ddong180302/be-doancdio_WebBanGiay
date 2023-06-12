@@ -67,10 +67,10 @@ const getAllUserPaginate = ({ current, pageSize, order, fullName, role, email, p
             };
             if (users) {
                 for (let i = 0; i < users.length; i++) {
-                    if (users[i].image) {
-                        users[i].image = await new Buffer.from(users[i].image, 'binary').toString('base64');
+                    if (users[i].avatar) {
+                        users[i].avatar = await new Buffer.from(users[i].avatar, 'binary').toString('base64');
                     } else {
-                        users[i].image = '';
+                        users[i].avatar = '';
                     }
                 }
             }
@@ -89,7 +89,7 @@ const getAllUserPaginate = ({ current, pageSize, order, fullName, role, email, p
     })
 }
 
-const updateUser = (token, id, fullName, phone) => {
+const updateUser = (token, id, fullName, phone, avatar) => {
     return new Promise(async (resolve, reject) => {
         try {
             if (token) {
@@ -110,27 +110,43 @@ const updateUser = (token, id, fullName, phone) => {
                     error: "Unauthorized"
                 })
             }
-            if (!id || !fullName || !phone) {
+            if (!id || !fullName || !phone || !avatar) {
                 resolve({
                     statusCode: 400,
                     message: "Không truyền đủ tham số"
                 })
             }
-            let user = await db.User.update({
+            let user = await db.User.findOne({
+                where: {
+                    id: id
+                }
+            })
+
+            await db.User.update({
                 fullName: fullName,
-                phone: phone
+                phone: phone,
+                avatar: avatar
             }, {
                 where: {
                     id: id
                 }
             });
+
             let data = {
                 id: user.id,
                 email: user.email,
                 fullName: user.fullName,
-                phone: user.fullName
+                phone: user.fullName,
+                avatar: user.avatar
             }
-            if (user) {
+
+            if (data && data.avatar) {
+                data.avatar = await new Buffer.from(data.avatar, 'binary').toString('base64');
+            } else {
+                data.avatar = '';
+            }
+
+            if (data) {
                 resolve({
                     statusCode: 200,
                     message: "",

@@ -4,21 +4,24 @@ import { Op, where } from 'sequelize';
 require('dotenv').config();
 import jwt from 'jsonwebtoken';
 
-const createNewGalery = (productId, image) => {
+const createNewGallery = (image) => {
     return new Promise(async (resolve, reject) => {
         try {
-            if (!productId || !image) {
+            if (!image) {
                 resolve({
                     statusCode: 400,
                     message: "Chưa nhập đủ tham số",
                 })
             } else {
-                const galery = await db.Galery.create({
+                const product = await db.Product.findOne({
+                    
+                })
+                const gallery = await db.Gallery.create({
                     product_id: productId,
                     image: image
                 })
 
-                if (galery) {
+                if (gallery) {
                     resolve({
                         statusCode: 200,
                         message: "",
@@ -35,10 +38,10 @@ const createNewGalery = (productId, image) => {
     })
 }
 
-const getAllGalery = () => {
+const getAllGallery = () => {
     return new Promise(async (resolve, reject) => {
         try {
-            const data = await db.Galery.findAll({
+            const data = await db.Gallery.findAll({
                 order: [['id', 'DESC']],
                 attributes: {
                     exclude: [
@@ -68,7 +71,7 @@ const getAllGalery = () => {
     })
 }
 
-const updateGalery = (productId, image) => {
+const updateGallery = (productId, image) => {
     return new Promise(async (resolve, reject) => {
         try {
             if (!productId || !image) {
@@ -77,7 +80,7 @@ const updateGalery = (productId, image) => {
                     message: "Không truyền đủ tham số"
                 })
             }
-            let galery = await db.Galery.update({
+            let gallery = await db.Gallery.update({
                 product_id: productId,
                 image: image
             }, {
@@ -86,10 +89,10 @@ const updateGalery = (productId, image) => {
                 }
             });
             let data = {
-                id: galery.id,
-                product_id: galery.product_id
+                id: gallery.id,
+                product_id: gallery.product_id
             }
-            if (galery) {
+            if (gallery) {
                 resolve({
                     statusCode: 200,
                     message: "",
@@ -110,7 +113,7 @@ const updateGalery = (productId, image) => {
 
 
 module.exports = {
-    createNewGalery,
-    getAllGalery,
-    updateGalery
+    createNewGallery,
+    getAllGallery,
+    updateGallery
 }

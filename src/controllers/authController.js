@@ -303,7 +303,7 @@ const login = async (req, res) => {
                             phone: user.phone,
                             fullName: user.fullName,
                             role: user.role,
-                            avatar: user.image
+                            avatar: user.avatar
                         },
                     }
                     if (data && data.user && data.user.avatar) {
@@ -373,10 +373,10 @@ const getAccount = async (req, res) => {
                 },
                 raw: true
             });
-            if (user && user.image) {
-                user.image = await new Buffer.from(user.image, 'binary').toString('base64');
+            if (user && user.avatar) {
+                user.avatar = await new Buffer.from(user.avatar, 'binary').toString('base64');
             } else {
-                user.image = '';
+                user.avatar = '';
             }
             if (user) {
                 res.status(200).json({
@@ -389,7 +389,7 @@ const getAccount = async (req, res) => {
                             phone: user.phone,
                             fullName: user.fullName,
                             role: user.role,
-                            avatar: user.image
+                            avatar: user.avatar
                         }
                     },
                 })

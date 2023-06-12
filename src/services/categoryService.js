@@ -33,43 +33,28 @@ const createNewCategory = (name) => {
     })
 }
 
-const getAllCategory = (token) => {
+const getAllCategory = () => {
     return new Promise(async (resolve, reject) => {
         try {
-            if (token) {
-                const access_token = token.split(" ")[1];
-                let decoded = jwt.verify(access_token, process.env.JWT_ACCESS_SECRET);
-                if (decoded) {
-                    let data = await db.Category.findAll({
-                        order: [['id', 'DESC']],
-                        attributes: {
-                            exclude: [
-                                "deleted_at",
-                            ]
-                        },
-                        raw: false,
-                        nest: true
-                    })
-                    if (!data) data = {};
-                    resolve({
-                        statusCode: 200,
-                        message: "",
-                        data: data
-                    })
-                } else {
-                    resolve({
-                        statusCode: 401,
-                        message: "Bạn Cần Access Token để truy cập APIs - Unauthorized (Token hết hạn, hoặc không hợp lệ, hoặc không truyền access token)",
-                        error: "Unauthorized"
-                    })
-                }
-            } else {
-                resolve({
-                    statusCode: 401,
-                    message: "Bạn Cần Access Token để truy cập APIs - Unauthorized (Token hết hạn, hoặc không hợp lệ, hoặc không truyền access token)",
-                    error: "Unauthorized"
-                })
-            }
+
+            let data = await db.Category.findAll({
+                order: [['id', 'DESC']],
+                attributes: {
+                    exclude: [
+                        "deleted_at",
+                    ]
+                },
+                raw: false,
+                nest: true
+            })
+            if (!data) data = {};
+            resolve({
+                statusCode: 200,
+                message: "",
+                data: data
+            })
+
+
         } catch (e) {
             reject(e);
         }

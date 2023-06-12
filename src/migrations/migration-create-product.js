@@ -11,20 +11,20 @@ module.exports = {
       category_id: {
         type: Sequelize.INTEGER
       },
-      title: {
+      name: {
         type: Sequelize.TEXT
       },
       price: {
         type: Sequelize.FLOAT
       },
-      discount: {
-        type: Sequelize.FLOAT
+      quantity: {
+        type: Sequelize.INTEGER
       },
-      image: {
+      sold: {
+        type: Sequelize.INTEGER
+      },
+      thumbnail: {
         type: Sequelize.BLOB('long')
-      },
-      description: {
-        type: Sequelize.TEXT
       },
       deleted_at: {
         type: Sequelize.DATE

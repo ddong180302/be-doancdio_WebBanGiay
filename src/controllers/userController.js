@@ -39,10 +39,10 @@ const getAllUser = async (req, res) => {
                     })
 
                     for (let i = 0; i < data.length; i++) {
-                        if (data[i].image) {
-                            data[i].image = await new Buffer.from(data[i].image, 'binary').toString('base64');
+                        if (data[i].avatar) {
+                            data[i].avatar = await new Buffer.from(data[i].avatar, 'binary').toString('base64');
                         } else {
-                            data[i].image = '';
+                            data[i].avatar = '';
                         }
                     }
                     if (!data) data = {};
@@ -499,7 +499,7 @@ const createNewUser = async (req, res) => {
                                 email: user.email,
                                 phone: user.phone,
                                 role: user.role,
-                                avatar: user.image,
+                                avatar: user.avatar,
                                 createdAt: user.createdAt,
                                 updatedAt: user.updatedAt,
                                 id: user.id,
@@ -582,7 +582,8 @@ const updateUser = async (req, res) => {
     try {
         const token = req.headers.authorization;
         const { id, fullName, phone } = req.body;
-        const response = await userService.updateUser(token, id, fullName, phone);
+        const avatar = req.file.buffer;
+        const response = await userService.updateUser(token, id, fullName, phone, avatar);
         return res.status(200).json(response)
     } catch (e) {
         console.log(e);

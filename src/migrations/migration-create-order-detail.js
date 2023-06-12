@@ -17,7 +17,7 @@ module.exports = {
       price: {
         type: Sequelize.FLOAT
       },
-      num: {
+      quantity: {
         type: Sequelize.INTEGER
       },
       total_money: {

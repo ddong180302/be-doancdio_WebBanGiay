@@ -6,16 +6,16 @@ require('dotenv').config();
 import productService from "../services/productService";
 
 const createNewProduct = async (req, res) => {
-    const { category_id, title, price, discount, description } = req.body;
-    const image = req.file.buffer;
-    console.log("chekc: ", image)
+    const { category_id, name, price, quantity, sold } = req.body;
+    const thumbnail = req.file.buffer;
+
     const token = req.headers.authorization;
     try {
         if (token) {
             const access_token = token.split(" ")[1];
             let decoded = jwt.verify(access_token, process.env.JWT_ACCESS_SECRET);
             if (decoded) {
-                const response = await productService.createNewProduct(category_id, title, price, discount, description, image);
+                const response = await productService.createNewProduct(category_id, name, price, quantity, sold, thumbnail);
                 return res.status(200).json(response);
             }
         } else {
@@ -69,13 +69,14 @@ const getAllProductPaginate = async (req, res) => {
 
 const updateProduct = async (req, res) => {
     const token = req.headers.authorization;
-    const { title, price, description } = req.body;
+    const { id, name, price, quantity } = req.body;
+    const thumbnail = req.file.buffer;
     try {
         if (token) {
             const access_token = token.split(" ")[1];
             let decoded = jwt.verify(access_token, process.env.JWT_ACCESS_SECRET);
             if (decoded) {
-                const response = await userService.getAllUserPaginate(title, price, description);
+                const response = await productService.updateProduct(id, name, price, quantity, thumbnail);
                 return res.status(200).json(response);
             }
         } else {

@@ -3,18 +3,17 @@ import bcrypt from 'bcryptjs';
 import jwt from 'jsonwebtoken';
 import { v4 as uuidv4 } from 'uuid';
 require('dotenv').config();
-import galeryService from "../services/galeryService";
+import galleryService from "../services/galleryService";
 
-const createNewGalery = async (req, res) => {
-    const { productId } = req.body;
-    const image = req.file.buffer;
+const createNewGallery = async (req, res) => {
+    const image = req.files;
     const token = req.headers.authorization;
     try {
         if (token) {
             const access_token = token.split(" ")[1];
             let decoded = jwt.verify(access_token, process.env.JWT_ACCESS_SECRET);
             if (decoded) {
-                const response = await galeryService.createNewGalery(productId, image);
+                const response = await galleryService.createNewGallery(image);
                 return res.status(200).json(response);
             }
         } else {
@@ -36,14 +35,14 @@ const createNewGalery = async (req, res) => {
 }
 
 
-const getAllGalery = async (req, res) => {
+const getAllGallery = async (req, res) => {
     const token = req.headers.authorization;
     try {
         if (token) {
             const access_token = token.split(" ")[1];
             let decoded = jwt.verify(access_token, process.env.JWT_ACCESS_SECRET);
             if (decoded) {
-                const response = await galeryService.getAllGalery();
+                const response = await galleryService.getAllGallery();
                 return res.status(200).json(response);
             }
         } else {
@@ -64,7 +63,7 @@ const getAllGalery = async (req, res) => {
 }
 
 
-const updateGalery = async (req, res) => {
+const updateGallery = async (req, res) => {
     let productId = req.body;
     let image = req.file.buffer;
     const token = req.headers.authorization;
@@ -73,7 +72,7 @@ const updateGalery = async (req, res) => {
             const access_token = token.split(" ")[1];
             let decoded = jwt.verify(access_token, process.env.JWT_ACCESS_SECRET);
             if (decoded) {
-                const response = await galeryService.updateGalery(productId, image);
+                const response = await galleryService.updateGallery(productId, image);
                 return res.status(200).json(response);
             }
         } else {
@@ -98,7 +97,7 @@ const updateGalery = async (req, res) => {
 
 
 module.exports = {
-    createNewGalery,
-    getAllGalery,
-    updateGalery
+    createNewGallery,
+    getAllGallery,
+    updateGallery
 }
