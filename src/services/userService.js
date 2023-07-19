@@ -89,7 +89,7 @@ const getAllUserPaginate = ({ current, pageSize, order, fullName, role, email, p
     })
 }
 
-const updateUser = (token, id, fullName, phone, avatar) => {
+const updateUser = (token, id, fullName, phone) => {
     return new Promise(async (resolve, reject) => {
         try {
             if (token) {
@@ -110,7 +110,7 @@ const updateUser = (token, id, fullName, phone, avatar) => {
                     error: "Unauthorized"
                 })
             }
-            if (!id || !fullName || !phone || !avatar) {
+            if (!id || !fullName || !phone) {
                 resolve({
                     statusCode: 400,
                     message: "Không truyền đủ tham số"
@@ -125,7 +125,6 @@ const updateUser = (token, id, fullName, phone, avatar) => {
             await db.User.update({
                 fullName: fullName,
                 phone: phone,
-                avatar: avatar
             }, {
                 where: {
                     id: id
@@ -136,14 +135,7 @@ const updateUser = (token, id, fullName, phone, avatar) => {
                 id: user.id,
                 email: user.email,
                 fullName: user.fullName,
-                phone: user.fullName,
-                avatar: user.avatar
-            }
-
-            if (data && data.avatar) {
-                data.avatar = await new Buffer.from(data.avatar, 'binary').toString('base64');
-            } else {
-                data.avatar = '';
+                phone: user.fullName
             }
 
             if (data) {

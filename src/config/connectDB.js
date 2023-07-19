@@ -1,4 +1,4 @@
-const { Sequelize } = require('sequelize');
+import Sequelize from 'sequelize';
 
 // // Option 1: Passing a connection URI
 // const sequelize = new Sequelize('sqlite::memory:') // Example for sqlite

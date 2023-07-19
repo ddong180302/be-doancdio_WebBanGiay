@@ -5,7 +5,7 @@ import { v4 as uuidv4 } from 'uuid';
 require('dotenv').config();
 import productService from "../services/productService";
 
-const createNewProduct = async (req, res) => {
+export const createNewProduct = async (req, res) => {
     const { category_id, name, price, quantity, sold } = req.body;
     const thumbnail = req.file.buffer;
 
@@ -36,7 +36,7 @@ const createNewProduct = async (req, res) => {
     }
 }
 
-const getAllProduct = async (req, res) => {
+export const getAllProduct = async (req, res) => {
     try {
         const response = await productService.getAllProduct();
         return res.status(200).json(response);
@@ -51,9 +51,11 @@ const getAllProduct = async (req, res) => {
     }
 }
 
-const getAllProductPaginate = async (req, res) => {
+export const getAllProductPaginate = async (req, res) => {
     try {
+        console.log(req.query)
         const response = await productService.getAllProductPaginate(req.query);
+        console.log(response)
         return res.status(200).json(response);
     }
     catch (e) {
@@ -67,16 +69,15 @@ const getAllProductPaginate = async (req, res) => {
 }
 
 
-const updateProduct = async (req, res) => {
+export const updateProduct = async (req, res) => {
     const token = req.headers.authorization;
     const { id, name, price, quantity } = req.body;
-    const thumbnail = req.file.buffer;
     try {
         if (token) {
             const access_token = token.split(" ")[1];
             let decoded = jwt.verify(access_token, process.env.JWT_ACCESS_SECRET);
             if (decoded) {
-                const response = await productService.updateProduct(id, name, price, quantity, thumbnail);
+                const response = await productService.updateProduct(id, name, price, quantity);
                 return res.status(200).json(response);
             }
         } else {
@@ -99,7 +100,7 @@ const updateProduct = async (req, res) => {
 
 
 
-const deleteProduct = async (req, res) => {
+export const deleteProduct = async (req, res) => {
     try {
         const token = req.headers.authorization;
         const { id } = req.params;
@@ -114,7 +115,7 @@ const deleteProduct = async (req, res) => {
     }
 }
 
-const getDetailProductById = async (req, res) => {
+export const getDetailProductById = async (req, res) => {
     try {
         const { id } = req.params;
         const response = await productService.getDetailProductById(id);

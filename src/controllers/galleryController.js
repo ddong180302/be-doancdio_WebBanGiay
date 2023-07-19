@@ -1,41 +1,35 @@
-import db from '../models';
-import bcrypt from 'bcryptjs';
 import jwt from 'jsonwebtoken';
-import { v4 as uuidv4 } from 'uuid';
 require('dotenv').config();
 import galleryService from "../services/galleryService";
-
-const createNewGallery = async (req, res) => {
+const TOKEN_ERROR_MESSAGE = "Bạn Cần Access Token để truy cập APIs - Unauthorized (Token hết hạn, hoặc không hợp lệ, hoặc không truyền access token)";
+export const createNewGallery = async (req, res, next) => {
+    // const image = req.files;
+    // const { product_id } = req.body;
+    // const token = req.headers.authorization;
+    // try {
+    //     if (token) {
+    //         const access_token = token.split(" ")[1];
+    //         let decoded = jwt.verify(access_token, process.env.JWT_ACCESS_SECRET);
+    //         if (decoded) {
+    //             const response = await galleryService.createNewGallery(image, product_id);
+    //             return res.status(200).json(response);
+    //         }
+    //     } else {
+    //         return res.status(401).json({
+    //             statusCode: 401,
+    //             message: TOKEN_ERROR_MESSAGE,
+    //             error: "Unauthorized"
+    //         })
+    //     }
+    // } catch (e) {
+    //     next(e);
+    // }
     const image = req.files;
-    const token = req.headers.authorization;
-    try {
-        if (token) {
-            const access_token = token.split(" ")[1];
-            let decoded = jwt.verify(access_token, process.env.JWT_ACCESS_SECRET);
-            if (decoded) {
-                const response = await galleryService.createNewGallery(image);
-                return res.status(200).json(response);
-            }
-        } else {
-            return res.status(401).json({
-                statusCode: 401,
-                message: "Bạn Cần Access Token để truy cập APIs - Unauthorized (Token hết hạn, hoặc không hợp lệ, hoặc không truyền access token)",
-                error: "Unauthorized"
-            })
-        }
-
-    } catch (e) {
-        console.log(e);
-        return res.status(401).json({
-            statusCode: 401,
-            message: "Bạn Cần Access Token để truy cập APIs - Unauthorized (Token hết hạn, hoặc không hợp lệ, hoặc không truyền access token)",
-            error: "Unauthorized"
-        })
-    }
+    const { product_id } = req.body;
+    const response = await galleryService.createNewGallery(image, product_id);
+    return res.status(200).json(response);
 }
-
-
-const getAllGallery = async (req, res) => {
+const getAllGallery = async (req, res, next) => {
     const token = req.headers.authorization;
     try {
         if (token) {
@@ -48,22 +42,15 @@ const getAllGallery = async (req, res) => {
         } else {
             return res.status(401).json({
                 statusCode: 401,
-                message: "Bạn Cần Access Token để truy cập APIs - Unauthorized (Token hết hạn, hoặc không hợp lệ, hoặc không truyền access token)",
+                message: TOKEN_ERROR_MESSAGE,
                 error: "Unauthorized"
             })
         }
     } catch (e) {
-        console.log(e);
-        return res.status(401).json({
-            statusCode: 401,
-            message: "Bạn Cần Access Token để truy cập APIs - Unauthorized (Token hết hạn, hoặc không hợp lệ, hoặc không truyền access token)",
-            error: "Unauthorized"
-        })
+        next(e);
     }
 }
-
-
-const updateGallery = async (req, res) => {
+const updateGallery = async (req, res, next) => {
     let productId = req.body;
     let image = req.file.buffer;
     const token = req.headers.authorization;
@@ -78,24 +65,14 @@ const updateGallery = async (req, res) => {
         } else {
             return res.status(401).json({
                 statusCode: 401,
-                message: "Bạn Cần Access Token để truy cập APIs - Unauthorized (Token hết hạn, hoặc không hợp lệ, hoặc không truyền access token)",
+                message: TOKEN_ERROR_MESSAGE,
                 error: "Unauthorized"
             })
         }
     } catch (e) {
-        console.log(e);
-        return res.status(401).json({
-            statusCode: 401,
-            message: "Bạn Cần Access Token để truy cập APIs - Unauthorized (Token hết hạn, hoặc không hợp lệ, hoặc không truyền access token)",
-            error: "Unauthorized"
-        })
+        next(e);
     }
 }
-
-
-
-
-
 module.exports = {
     createNewGallery,
     getAllGallery,

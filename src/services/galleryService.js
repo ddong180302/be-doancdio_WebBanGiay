@@ -4,29 +4,29 @@ import { Op, where } from 'sequelize';
 require('dotenv').config();
 import jwt from 'jsonwebtoken';
 
-const createNewGallery = (image) => {
+const createNewGallery = (image, product_id) => {
     return new Promise(async (resolve, reject) => {
         try {
-            if (!image) {
+            if (!image || !product_id) {
                 resolve({
                     statusCode: 400,
                     message: "Chưa nhập đủ tham số",
                 })
             } else {
-                const product = await db.Product.findOne({
-                    
-                })
-                const gallery = await db.Gallery.create({
-                    product_id: productId,
-                    image: image
-                })
+                let gallery = {};
+                for (let i = 0; i < image.length; i++) {
+                    gallery = await db.Gallery.create({
+                        product_id: product_id,
+                        image: image[i].buffer
+                    })
+                }
 
                 if (gallery) {
                     resolve({
                         statusCode: 200,
                         message: "",
                         data: {
-                            product_id: productId,
+                            product_id: product_id,
                             image: image
                         }
                     })

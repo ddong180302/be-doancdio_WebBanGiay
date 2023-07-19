@@ -4,7 +4,7 @@ import { Op, where } from 'sequelize';
 require('dotenv').config();
 import jwt from 'jsonwebtoken';
 
-const createNewProduct = (category_id, name, price, quantity, sold, thumbnail) => {
+export const createNewProduct = (category_id, name, price, quantity, sold, thumbnail) => {
     return new Promise(async (resolve, reject) => {
         try {
             if (!category_id || !name || !price || !quantity || !sold || !thumbnail) {
@@ -27,11 +27,12 @@ const createNewProduct = (category_id, name, price, quantity, sold, thumbnail) =
                         statusCode: 200,
                         message: "",
                         data: {
-                            category_id: category_id,
-                            name: name,
-                            price: price,
-                            quantity: quantity,
-                            sold: sold
+                            product_id: product.id,
+                            category_id: product.category_id,
+                            name: product.name,
+                            price: product.price,
+                            quantity: product.quantity,
+                            sold: product.sold
                         }
                     })
                 }
@@ -42,7 +43,7 @@ const createNewProduct = (category_id, name, price, quantity, sold, thumbnail) =
     })
 }
 
-const getAllProduct = () => {
+export const getAllProduct = () => {
     return new Promise(async (resolve, reject) => {
         try {
 
@@ -76,21 +77,14 @@ const getAllProduct = () => {
     })
 }
 
-const getAllProductPaginate = ({ current, pageSize, order, category_id, name, price, quantity, sold, createdAt, updatedAt, ...query }) => {
+export const getAllProductPaginate = ({ current, pageSize, order, category_id, name, price, quantity, sold, createdAt, updatedAt, ...query }) => {
     return new Promise(async (resolve, reject) => {
         try {
-            const queries = {
-                raw: true, nest: true, attributes: {
-                    exclude: [
-                        "deleted_at",
-                    ]
-                },
-            };
             let limit = +pageSize || process.env.LIMIT_USER;
+            console.log(limit);
             let offset = (!current || +current <= 1) ? 0 : (+current - 1) * limit;
-            if (offset) queries.offset = offset;
-            if (limit) queries.limit = limit;
-            if (order) queries.order = [[order.split(' ')[0], order.split(' ')[1]]];
+            console.log(offset);
+
             const where = {};
             let categoryIds = category_id;
             if (category_id && typeof category_id === 'string') {
@@ -135,14 +129,16 @@ const getAllProductPaginate = ({ current, pageSize, order, category_id, name, pr
                     [Op.substring]: updatedAt
                 };
             }
-
-            let product = await db.Product.findAll({
-                ...queries,
-                where: {
-                    ...query,
-                    ...where,
-                },
+            let product = await db.Product.findAndCountAll({
+                raw: true,
+                nest: true,
+                attributes: { exclude: ["deleted_at"] },
+                where: { ...query, ...where },
+                order: [[order?.split(' ')[0], order?.split(' ')[1]]],
+                limit,
+                offset
             });
+            console.log(product)
             const total = await db.Product.count();
             const pages = Math.ceil(total / pageSize); // Tổng số trang
             const meta = {
@@ -152,7 +148,7 @@ const getAllProductPaginate = ({ current, pageSize, order, category_id, name, pr
                 total: total
             };
 
-            let result = product;
+            const result = product.rows || [];
             for (let i = 0; i < result.length; i++) {
                 if (result[i].thumbnail) {
                     result[i].thumbnail = await new Buffer.from(result[i].thumbnail, 'binary').toString('base64');
@@ -189,7 +185,7 @@ const getAllProductPaginate = ({ current, pageSize, order, category_id, name, pr
     })
 }
 
-const updateProduct = (id, name, price, quantity, thumbnail) => {
+export const updateProduct = (id, name, price, quantity) => {
     return new Promise(async (resolve, reject) => {
         try {
             if (!id || !name || !price || !quantity) {
@@ -209,7 +205,6 @@ const updateProduct = (id, name, price, quantity, thumbnail) => {
                     name: name,
                     price: price,
                     quantity: quantity,
-                    thumbnail: thumbnail
                 }, {
                     where: {
                         id: id
@@ -239,7 +234,7 @@ const updateProduct = (id, name, price, quantity, thumbnail) => {
     })
 }
 
-let deleteProduct = (token, id) => {
+export const deleteProduct = (token, id) => {
     return new Promise(async (resolve, reject) => {
         try {
             if (token) {
@@ -295,8 +290,9 @@ let deleteProduct = (token, id) => {
     })
 }
 
-let getDetailProductById = (id) => {
+export const getDetailProductById = (id) => {
     return new Promise(async (resolve, reject) => {
+        console.log("check id: ", id)
         try {
             if (!id) {
                 resolve({
@@ -336,7 +332,6 @@ let getDetailProductById = (id) => {
                 dataProduct,
                 dataGallery
             }
-
             resolve({
                 statusCode: 200,
                 message: '',

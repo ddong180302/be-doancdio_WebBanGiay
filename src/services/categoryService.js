@@ -72,10 +72,15 @@ const getAllCategoryPaginate = ({ current, pageSize, order, name, createdAt, upd
                 },
             };
             let limit = +pageSize || process.env.LIMIT_USER;
+            console.log("limit", limit);
             let offset = (!current || +current <= 1) ? 0 : (+current - 1) * limit;
+            console.log("offset", offset);
+
             if (offset) queries.offset = offset;
             if (limit) queries.limit = limit;
             if (order) queries.order = [[order.split(' ')[0], order.split(' ')[1]]];
+            console.log("queries: ", queries);
+
             const where = {};
             if (name) {
                 where.name = {
@@ -125,7 +130,7 @@ const getAllCategoryPaginate = ({ current, pageSize, order, name, createdAt, upd
     })
 }
 
-const updateCategory = (name) => {
+const updateCategory = (id, name) => {
     return new Promise(async (resolve, reject) => {
         try {
             if (!name) {

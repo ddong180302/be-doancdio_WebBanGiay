@@ -1,574 +1,329 @@
 import db from '../models';
 import bcrypt from 'bcryptjs';
 import jwt from 'jsonwebtoken';
-import { v4 as uuidv4 } from 'uuid';
 require('dotenv').config();
-import authService from "../services/authService";
+import validator from 'validator';
 
-let checkUserEmail = (email) => {
-    return new Promise(async (resolve, reject) => {
-        try {
-            let user = await db.User.findOne({
-                where: { email: email }
-            })
-            if (user) {
-                resolve(true)
-            } else {
-                resolve(false)
-            }
-        } catch (e) {
-            reject(e)
-        }
-    })
-}
-
-
-let hashUserPassword = (password) => {
-    return new Promise(async (resolve, reject) => {
-        try {
-            let salt = await bcrypt.genSaltSync(10);
-            let hashPassword = await bcrypt.hashSync(password, salt);
-            resolve(hashPassword);
-        } catch (e) {
-            reject(e);
-        }
-    })
-}
-
-const register = async (req, res) => {
-    const { fullName, email, password, phone } = req.body;
-    //try {
-    // const response = await authService.register(fullName, email, password, phone);
-    // return res.status(201).json(response)
-    const validateEmail = (email) => {
-        return String(email)
-            .toLowerCase()
-            .match(/^(([^<>()[\]\\.,;:\s@"]+(\.[^<>()[\]\\.,;:\s@"]+)*)|.(".+"))@((\[[0-9]{1,3}\.[0-9]{1,3}\.[0-9]{1,3}\.[0-9]{1,3}\])|(([a-zA-Z\-0-9]+\.)+[a-zA-Z]{2,}))$/
-            );
-    }
+let checkUserEmail = async (email) => {
     try {
-        const isValidEmail = validateEmail(email);
-        if (!fullName && !isValidEmail && !phone && !password) {
-            res.status(400).json({
-                statusCode: 400,
-                message: [
-                    'fullName không được để trống',
-                    'phone không được để trống',
-                    'password không được để trống',
-                    'email không được để trống or không đúng định dạng'
-                ],
-                error: "Bad Request"
-            })
-        }
+        let user = await db.User.findOne({
+            where: { email: email },
+            attributes: ['email']
+        })
+        return user !== null;
+    } catch (e) {
+        throw e;
+    }
+}
 
-        if (!fullName && !isValidEmail && !phone) {
-            res.status(400).json({
-                statusCode: 400,
-                message: [
-                    'fullName không được để trống',
-                    'phone không được để trống',
-                    'email không được để trống or không đúng định dạng'
-                ],
-                error: "Bad Request"
-            })
-        }
+let hashUserPassword = async (password) => {
+    try {
+        let salt = await bcrypt.genSalt(10);
+        let hashPassword = await bcrypt.hash(password, salt);
+        return hashPassword;
+    } catch (e) {
+        throw e;
+    }
+}
 
-        if (!fullName && !password && !phone) {
-            res.status(400).json({
-                statusCode: 400,
-                message: [
-                    'fullName không được để trống',
-                    'phone không được để trống',
-                    'password không được để trống',
-                ],
-                error: "Bad Request"
-            })
-        }
-
-        if (!isValidEmail && !password && !phone) {
-            res.status(400).json({
-                statusCode: 400,
-                message: [
-                    'password không được để trống',
-                    'phone không được để trống',
-                    'email không được để trống or không đúng định dạng'
-                ],
-                error: "Bad Request"
-            })
-        }
-        if (!isValidEmail && !password && !fullName) {
-            res.status(400).json({
-                statusCode: 400,
-                message: [
-                    'fullName không được để trống',
-                    'phone không được để trống',
-                    'email không được để trống or không đúng định dạng'
-                ],
-                error: "Bad Request"
-            })
-        }
-
-        if (!fullName && !isValidEmail) {
-            res.status(400).json({
-                statusCode: 400,
-                message: [
-                    'fullName không được để trống',
-                    'email không được để trống or không đúng định dạng'
-                ],
-                error: "Bad Request"
-            })
-        }
-
-        if (!fullName && !password) {
-            res.status(400).json({
-                statusCode: 400,
-                message: [
-                    'fullName không được để trống',
-                    'password không được để trống'
-                ],
-                error: "Bad Request"
-            })
-        }
-
-        if (!fullName && !phone) {
-            res.status(400).json({
-                statusCode: 400,
-                message: [
-                    'fullName không được để trống',
-                    'phone không được để trống'
-                ],
-                error: "Bad Request"
-            })
-        }
-
-        if (!password && !phone) {
-            res.status(400).json({
-                statusCode: 400,
-                message: [
-                    'phone không được để trống',
-                    'password không được để trống',
-                ],
-                error: "Bad Request"
-            })
-        }
-
-        if (!password && !isValidEmail) {
-            res.status(400).json({
-                statusCode: 400,
-                message: [
-                    'email không được để trống or không đúng định dạng',
-                    'password không được để trống',
-                ],
-                error: "Bad Request"
-            })
-        }
-
-        if (!phone && !isValidEmail) {
-            res.status(400).json({
-                statusCode: 400,
-                message: [
-                    'email không được để trống or không đúng định dạng',
-                    'phone không được để trống',
-                ],
-                error: "Bad Request"
-            })
-        }
-
+export const register = async (req, res, next) => {
+    const { fullName, email, password, phone } = req.body;
+    try {
+        const errors = [];
         if (!fullName) {
-            res.status(400).json({
-                statusCode: 400,
-                message: ['fullName không được để trống'],
-                error: "Bad Request"
-            })
+            errors.push("fullName không được để trống");
         }
 
-        if (!password) {
-            res.status(400).json({
-                statusCode: 400,
-                message: ['password không được để trống'],
-                error: "Bad Request"
-            })
+        if (!email) {
+            errors.push("email không được để trống");
+        } else {
+            const isValidEmail = validator.isEmail(email);
+            if (!isValidEmail) {
+                errors.push("email không đúng định dạng");
+            } else {
+                const isExistEmail = await checkUserEmail(email);
+                if (isExistEmail) {
+                    errors.push("Email đã tồn tại, vui lòng sử dụng email khác");
+                }
+            }
         }
 
         if (!phone) {
-            res.status(400).json({
-                statusCode: 400,
-                message: ['phone không được để trống'],
-                error: "Bad Request"
-            })
+            errors.push("phone không được để trống");
         }
 
-        if (!isValidEmail) {
-            res.status(400).json({
-                statusCode: 400,
-                message: ['email không được để trống or không đúng định dạng'],
-                error: "Bad Request"
-            })
+        if (!password) {
+            errors.push("password không được để trống");
         }
 
-        let check = await checkUserEmail(email);
-        if (check === true) {
+        if (errors.length > 0) {
             res.status(400).json({
                 statusCode: 400,
-                message: 'Email đã tồn tại, vui lòng sử dụng email khác',
-                error: "Bad Request"
-            })
-        } else {
-            let hashPasswordFromBcrypt = await hashUserPassword(password);
-            const user = await db.User.create({
-                fullName: fullName,
-                email: email,
-                password: hashPasswordFromBcrypt,
-                phone: phone,
-                role: "USER",
+                message: errors,
+                error: "Bad Request",
             });
-            if (user) {
-                res.status(201).json({
-                    statusCode: 201,
-                    message: "",
-                    data: {
-                        id: user.id,
-                        email: user.email,
-                        fullName: user.fullName
-                    },
-                })
-            }
         }
-
+        const hashPasswordFromBcrypt = await hashUserPassword(password);
+        const user = await db.User.create({
+            fullName: fullName,
+            email: email,
+            password: hashPasswordFromBcrypt,
+            phone: phone,
+            role: "USER",
+        });
+        res.status(201).json({
+            statusCode: 201,
+            message: "",
+            data: {
+                id: user.id,
+                email: email,
+                fullName: fullName,
+            },
+        });
     } catch (e) {
-        console.log(e);
-        return res.status(500).json({
-            statusCode: 500,
-            message: 'Error from the server!'
-        })
+        next(e);
     }
-}
+};
 
-const login = async (req, res) => {
+export const login = async (req, res, next) => {
+
     const { email, password } = req.body;
     try {
-        // const response = await authService.login(email, password);
-        // return res.status(201).json(response);
-        let isExist = await checkUserEmail(email);
-        if (isExist === true) {
-            let user = await db.User.findOne({
-                where: { email: email },
-                raw: true
-            });
-            if (user) {
-                let check = bcrypt.compareSync(password, user.password)
-                if (check) {
-                    const access_token = jwt.sign({
-                        email: user.email,
-                        phone: user.phone,
-                        fullName: user.fullName,
-                        role: user.role,
-                        sub: user.id
-                    },
-                        process.env.JWT_ACCESS_SECRET, {
-                        expiresIn: "10h"
-                    })
-                    const refresh_token = jwt.sign({
-                        email: user.email,
-                        phone: user.phone,
-                        fullName: user.fullName,
-                        role: user.role,
-                        sub: user.id
-                    },
-                        process.env.JWT_REFRESH_SECRET, {
-                        expiresIn: "1d"
-                    })
+        const isExist = await checkUserEmail(email);
 
-                    res.cookie("refresh_token", refresh_token, {
-                        httpOnly: true,
-                        secure: false,
-                        path: "/",
-                        sameSite: "strict",
-                        expires: new Date(Date.now() + 3600000),
-                    });
+        if (!isExist) {
+            return {
+                statusCode: 400,
+                message: "Thông tin đăng nhập không chính xác",
+                error: "Bad Request",
+            };
+        }
 
-                    await db.User.update({
-                        refresh_token: refresh_token
-                    }, {
-                        where: {
-                            email: email
-                        }
-                    });
+        const user = await db.User.findOne({
+            where: { email: email },
+            raw: true,
+        });
+        if (!user) {
+            return {
+                statusCode: 400,
+                message: "Thông tin đăng nhập không chính xác",
+                error: "Bad Request",
+            };
+        }
 
-                    const data = {
-                        access_token: access_token,
-                        user: {
-                            id: user.id,
-                            email: user.email,
-                            phone: user.phone,
-                            fullName: user.fullName,
-                            role: user.role,
-                            avatar: user.avatar
-                        },
-                    }
-                    if (data && data.user && data.user.avatar) {
-                        data.user.avatar = await new Buffer.from(data.user.avatar, 'binary').toString('base64');
-                    } else {
-                        data.user.avatar = '';
-                    }
-                    res.status(201).json({
-                        statusCode: 201,
-                        message: "",
-                        data: data,
-                    })
-                } else {
-                    res.status(400).json({
-                        statusCode: 400,
-                        message: "Thông tin đăng nhập không chính xác",
-                        error: "Bad Request"
-                    })
-                }
-            } else {
-                res.status(400).json({
-                    statusCode: 400,
-                    message: "Thông tin đăng nhập không chính xác",
-                    error: "Bad Request"
-                })
-            }
-        } else {
+        const isPasswordCorrect = await bcrypt.compare(password, user.password);
+        if (!isPasswordCorrect) {
             res.status(400).json({
                 statusCode: 400,
                 message: "Thông tin đăng nhập không chính xác",
-                error: "Bad Request"
-            })
-        }
-    } catch (e) {
-        console.log(e);
-        return res.status(500).json({
-            statusCode: 500,
-            message: 'Error from the server!'
-        })
-    }
-}
-
-const getAccount = async (req, res) => {
-    try {
-        const token = req.headers.authorization;
-        // const response = await authService.getAccount(token);
-        // return res.status(200).json(response);
-        if (!token) {
-            res.status(401).json({
-                statusCode: 401,
-                message: "Bạn Cần Access Token để truy cập APIs - Unauthorized (Token hết hạn, hoặc không hợp lệ, hoặc không truyền access token)",
-                error: "Unauthorized"
-            })
-        }
-        const access_token = token.split(" ")[1];
-        let decoded = jwt.verify(access_token, process.env.JWT_ACCESS_SECRET);
-        if (!decoded) {
-            res.status(401).json({
-                statusCode: 401,
-                message: "Bạn Cần Access Token để truy cập APIs - Unauthorized (Token hết hạn, hoặc không hợp lệ, hoặc không truyền access token)",
-                error: "Unauthorized"
-            })
-        } else {
-            let user = await db.User.findOne({
-                where: {
-                    email: decoded.email
-                },
-                raw: true
+                error: "Bad Request",
             });
-            if (user && user.avatar) {
-                user.avatar = await new Buffer.from(user.avatar, 'binary').toString('base64');
-            } else {
-                user.avatar = '';
-            }
-            if (user) {
-                res.status(200).json({
-                    statusCode: 200,
-                    message: "",
-                    data: {
-                        user: {
-                            id: user.id,
-                            email: user.email,
-                            phone: user.phone,
-                            fullName: user.fullName,
-                            role: user.role,
-                            avatar: user.avatar
-                        }
-                    },
-                })
-            }
         }
-    } catch (e) {
-        console.log(e);
-        res.status(401).json({
-            statusCode: 401,
-            message: "Bạn Cần Access Token để truy cập APIs - Unauthorized (Token hết hạn, hoặc không hợp lệ, hoặc không truyền access token)",
-            error: "Unauthorized"
-        })
-    }
-}
 
-const logout = async (req, res) => {
-    try {
-        const token = req.headers.authorization;
-        // const response = await authService.logout(token);
-        // return res.status(201).json(response);
-        if (!token) {
-            res.status(401).json({
-                statusCode: 401,
-                message: "Bạn Cần Access Token để truy cập APIs - Unauthorized (Token hết hạn, hoặc không hợp lệ, hoặc không truyền access token)",
-                error: "Unauthorized"
-            })
-        }
-        const access_token = token.split(" ")[1];
-        let decoded = jwt.verify(access_token, process.env.JWT_ACCESS_SECRET);
-        if (!decoded) {
-            res.status(401).json({
-                statusCode: 401,
-                message: "Bạn Cần Access Token để truy cập APIs - Unauthorized (Token hết hạn, hoặc không hợp lệ, hoặc không truyền access token)",
-                error: "Unauthorized"
-            })
-        } else {
-            let user = await db.User.findOne({
+        const payload = {
+            email: user.email,
+            phone: user.phone,
+            fullName: user.fullName,
+            role: user.role,
+            sub: user.id,
+        };
+
+        const access_token = jwt.sign(payload, process.env.JWT_ACCESS_SECRET, {
+            expiresIn: "1h",
+        });
+
+        const refresh_token = jwt.sign(payload, process.env.JWT_REFRESH_SECRET, {
+            expiresIn: "1d",
+        });
+
+        await db.User.update(
+            {
+                refresh_token: refresh_token,
+            },
+            {
                 where: {
-                    email: decoded.email
+                    email: email,
                 },
-                raw: true
-            });
-            if (user) {
-                res.clearCookie("refresh_token");
-                await db.User.update({
-                    refresh_token: ""
-                }, {
-                    where: {
-                        email: decoded.email
-                    }
-                });
-                res.status(200).json({
-                    statusCode: 201,
-                    message: "",
-                    data: "Logout success."
-                })
             }
+        );
+        res.cookie("refresh_token", refresh_token, {
+            httpOnly: true,
+            secure: false,
+            path: "/",
+            sameSite: "strict",
+            expires: new Date(Date.now() + 3600000),
+        });
+
+        const data = {
+            access_token: access_token,
+            user: {
+                id: user.id,
+                email: user.email,
+                phone: user.phone,
+                fullName: user.fullName,
+                role: user.role,
+                avatar: user.avatar
+            },
         }
-    } catch (e) {
-        console.log(e);
-        return res.status(401).json({
-            statusCode: 401,
-            message: "Bạn Cần Access Token để truy cập APIs - Unauthorized (Token hết hạn, hoặc không hợp lệ, hoặc không truyền access token)",
-            error: "Unauthorized"
+        if (data && data.user && data.user.avatar) {
+            data.user.avatar = await new Buffer.from(data.user.avatar, 'binary').toString('base64');
+        } else {
+            data.user.avatar = '';
+        }
+        res.status(201).json({
+            statusCode: 201,
+            message: "",
+            data: data,
         })
+
+    } catch (e) {
+        next(e)
     }
-}
+};
 
-
-
-const refresh = async (req, res) => {
+export const getAccount = async (req, res, next) => {
+    const decoded = req.user;
     try {
-        let token = req.headers.cookie;
-        // const response = await authService.refresh(token);
-        // return res.status(201).json(response);
-        if (token) {
-            let refresh_token = token.substring('refresh_token='.length);
-            if (!refresh_token) {
-                await res.status(401).json({
-                    statusCode: 401,
-                    message: "Bạn Cần Access Token để truy cập APIs - Unauthorized (Token hết hạn, hoặc không hợp lệ, hoặc không truyền access token)",
-                    error: "Unauthorized"
-                })
-            }
-            let decoded = jwt.verify(refresh_token, process.env.JWT_REFRESH_SECRET);
-
-            if (!decoded) {
-                await res.status(401).json({
-                    statusCode: 402,
-                    message: "Bạn Cần Access Token để truy cập APIs - Unauthorized (Token hết hạn, hoặc không hợp lệ, hoặc không truyền access token)",
-                    error: "Unauthorized"
-                })
-            } else {
-                let user = await db.User.findOne({
-                    where: {
-                        email: decoded.email,
-                        refresh_token: refresh_token
-                    },
-                    raw: true
-                });
-                if (user) {
-                    const access_token = jwt.sign({
+        const user = await db.User.findOne({
+            where: {
+                email: decoded.email
+            },
+            raw: true,
+        });
+        if (user) {
+            const avatar = user.avatar ? await new Buffer.from(user.avatar, "binary").toString("base64") : "";
+            res.status(200).json({
+                statusCode: 200,
+                message: "",
+                data: {
+                    user: {
+                        id: user.id,
                         email: user.email,
                         phone: user.phone,
                         fullName: user.fullName,
                         role: user.role,
-                        sub: user.id
+                        avatar: avatar,
                     },
-                        process.env.JWT_ACCESS_SECRET, {
-                        expiresIn: "10h"
-                    })
-                    const refresh_token = jwt.sign({
-                        email: user.email,
-                        phone: user.phone,
-                        fullName: user.fullName,
-                        role: user.role,
-                    },
-                        process.env.JWT_REFRESH_SECRET, {
-                        expiresIn: "1d"
-                    })
-
-                    await res.cookie("refresh_token", refresh_token, {
-                        httpOnly: true,
-                        secure: false,
-                        path: "/",
-                        sameSite: "strict",
-                    })
-
-                    await db.User.update({
-                        refresh_token: refresh_token
-                    }, {
-                        where: {
-                            email: decoded.email
-                        }
-                    });
-
-                    const data = {
-                        access_token: access_token,
-                        user: {
-                            id: user.id,
-                            email: user.email,
-                            phone: user.phone,
-                            fullName: user.fullName,
-                            role: user.role,
-                        }
-                    }
-                    await res.status(200).json({
-                        statusCode: 200,
-                        message: "",
-                        data: data
-                    })
-                } else {
-                    await res.status(401).json({
-                        statusCode: 402,
-                        message: "Bạn Cần Access Token để truy cập APIs - Unauthorized (Token hết hạn, hoặc không hợp lệ, hoặc không truyền access token)",
-                        error: "Unauthorized"
-                    })
-                }
-            }
-        } else {
-            await res.status(400).json({
-                statusCode: 400,
-                message: "Không tồn tại refresh_token ở cookies. Please do login again.",
-                error: "Unauthorized"
-            })
+                },
+            });
         }
+
     } catch (e) {
-        console.log(e);
-        return await res.status(400).json({
-            statusCode: 400,
-            message: "Không tồn tại refresh_token ở cookies. Please do login again.",
-            error: "Unauthorized"
-        })
+        next(e);
     }
-}
-module.exports = {
-    register,
-    login,
-    getAccount,
-    logout,
-    refresh
+
+};
+
+export const logout = async (req, res, next) => {
+    const user = req.user;
+    try {
+        res.clearCookie("refresh_token");
+        await db.User.update(
+            {
+                refresh_token: "",
+            },
+            {
+                where: {
+                    email: user.email,
+                },
+            }
+        );
+        res.status(201).json({
+            statusCode: 201,
+            message: "",
+            data: "Logout success.",
+        });
+
+    } catch (e) {
+        next(e);
+    }
+};
+
+export const refresh = async (req, res, next) => {
+    const decoded = req.user;
+    try {
+        const user = await db.User.findOne({
+            where: {
+                email: decoded.email
+            },
+            raw: true,
+        });
+
+        if (!user) {
+            await res.status(402).json({
+                statusCode: 402,
+                message: "User not found",
+                error: "Unauthorized",
+            });
+        }
+
+        const access_token = jwt.sign(
+            {
+                email: user.email,
+                phone: user.phone,
+                fullName: user.fullName,
+                role: user.role,
+                sub: user.id,
+            },
+            process.env.JWT_ACCESS_SECRET,
+            {
+                expiresIn: "1h",
+            }
+        );
+
+        const refresh_token = jwt.sign(
+            {
+                email: user.email,
+                phone: user.phone,
+                fullName: user.fullName,
+                role: user.role,
+                sub: user.id,
+            },
+            process.env.JWT_REFRESH_SECRET,
+            {
+                expiresIn: "1d",
+            }
+        );
+
+        await res.cookie("refresh_token", refresh_token, {
+            httpOnly: true,
+            secure: false,
+            path: "/",
+            sameSite: "strict",
+        });
+
+        await db.User.update(
+            {
+                refresh_token: refresh_token,
+            },
+            {
+                where: {
+                    email: decoded.email,
+                },
+            }
+        );
+
+        const data = {
+            access_token: access_token,
+            user: {
+                id: user.id,
+                email: user.email,
+                phone: user.phone,
+                fullName: user.fullName,
+                role: user.role,
+            },
+        };
+
+        await res.status(401).json({
+            statusCode: 200,
+            message: "",
+            data: data,
+        });
+    } catch (e) {
+        next(e);
+    }
+};
+
+export default {
+    register, refresh, login, logout, getAccount
 }

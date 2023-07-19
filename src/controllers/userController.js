@@ -582,8 +582,8 @@ const updateUser = async (req, res) => {
     try {
         const token = req.headers.authorization;
         const { id, fullName, phone } = req.body;
-        const avatar = req.file.buffer;
-        const response = await userService.updateUser(token, id, fullName, phone, avatar);
+        //const avatar = req.file.buffer;
+        const response = await userService.updateUser(token, id, fullName, phone);
         return res.status(200).json(response)
     } catch (e) {
         console.log(e);

@@ -1,133 +1,195 @@
 import db from '../models';
-import bcrypt from 'bcryptjs';
 import jwt from 'jsonwebtoken';
-import { v4 as uuidv4 } from 'uuid';
+import { Op, where } from 'sequelize';
 require('dotenv').config();
-import categoryService from "../services/categoryService";
 
-const createNewCategory = async (req, res) => {
+const TOKEN_ERROR_MESSAGE = "Bạn Cần Access Token để truy cập APIs - Unauthorized (Token hết hạn, hoặc không hợp lệ, hoặc không truyền access token)";
+
+export const createNewCategory = async (req, res, next) => {
     const { name } = req.body;
-    const token = req.headers.authorization;
+    if (!name) {
+        res.status(400).json({
+            statusCode: 400,
+            message: "Chưa nhập tên danh mục cần tạo",
+        });
+    }
     try {
-        if (token) {
-            const access_token = token.split(" ")[1];
-            let decoded = jwt.verify(access_token, process.env.JWT_ACCESS_SECRET);
-            if (decoded) {
-                const response = await categoryService.createNewCategory(name);
-                return res.status(200).json(response);
+        const category = await db.Category.create({ name });
+        return {
+            statusCode: 200,
+            message: "",
+            data: {
+                name: category.name
             }
-        } else {
-            return res.status(401).json({
-                statusCode: 401,
-                message: "Bạn Cần Access Token để truy cập APIs - Unauthorized (Token hết hạn, hoặc không hợp lệ, hoặc không truyền access token)",
-                error: "Unauthorized"
-            })
-        }
-
+        };
     } catch (e) {
-        console.log(e);
-        return res.status(401).json({
-            statusCode: 401,
-            message: "Bạn Cần Access Token để truy cập APIs - Unauthorized (Token hết hạn, hoặc không hợp lệ, hoặc không truyền access token)",
-            error: "Unauthorized"
-        })
+        next(e);
     }
 }
 
-const getAllCategory = async (req, res) => {
+
+export const getAllCategory = async (req, res, next) => {
     try {
-        const response = await categoryService.getAllCategory();
-        return res.status(200).json(response);
+        const data = await db.Category.findAll({
+            order: [['id', 'DESC']],
+            attributes: { exclude: ["deleted_at"] },
+            raw: false,
+            nest: true
+        });
+
+        res.status(200).json({
+            statusCode: 200,
+            message: "",
+            data: data || {}
+        });
     }
     catch (e) {
-        console.log(e);
-        return res.status(401).json({
-            statusCode: 401,
-            message: "Bạn Cần Access Token để truy cập APIs - Unauthorized (Token hết hạn, hoặc không hợp lệ, hoặc không truyền access token)",
-            error: "Unauthorized"
-        })
+        next(e);
     }
 }
 
-const getAllCategoryPaginate = async (req, res) => {
+export const getAllCategoryPaginate = async (req, res, next) => {
+    const { current, pageSize, order, name, createdAt, updatedAt, ...query } = req.query;
+
+    const limit = +pageSize;
+    const offset = (+current - 1) * limit;
+    console.log(offset)
+    const where = {};
+
+    if (name) {
+        where.name = { [Op.substring]: name };
+    }
+
+    if (createdAt) {
+        where.createdAt = { [Op.substring]: createdAt };
+    }
+
+    if (updatedAt) {
+        where.updatedAt = { [Op.substring]: updatedAt };
+    }
+
+    try {
+        const categories = await db.Category.findAndCountAll({
+            raw: true,
+            nest: true,
+            attributes: { exclude: ["deleted_at"] },
+            where: { ...query, ...where },
+            order: [[order?.split(' ')[0], order?.split(' ')[1]]],
+            limit,
+            offset
+        });
+        const total = categories.count;
+        const pages = Math.ceil(total / pageSize);
+        const meta = { current: +current, pageSize: +pageSize, pages, total };
+        const result = categories.rows || [];
+
+        res.status(200).json({
+            statusCode: 200,
+            message: "",
+            data: { meta, result }
+        });
+    }
+    catch (e) {
+        next(e);
+    }
+}
+
+export const updateCategory = async (req, res, next) => {
     const token = req.headers.authorization;
+    const { id, name } = req.body;
+    if (!name) {
+        return {
+            statusCode: 400,
+            message: "Không truyền đủ tham số"
+        };
+    }
     try {
         if (token) {
             const access_token = token.split(" ")[1];
             let decoded = jwt.verify(access_token, process.env.JWT_ACCESS_SECRET);
             if (decoded) {
-                const response = await categoryService.getAllCategoryPaginate(req.query);
-                return res.status(200).json(response);
+                const [category] = await db.Category.update({ name }, { where: { id } });
+                if (category) {
+                    const data = { id: category.id, name: category.name };
+                    res.status(200).json({
+                        statusCode: 200,
+                        message: "",
+                        data
+                    });
+                } else {
+                    res.status(200).json({
+                        statusCode: 400,
+                        message: "Người dùng không tồn tại!"
+                    });
+                }
             }
         } else {
-            return res.status(401).json({
+            res.status(401).json({
                 statusCode: 401,
-                message: "Bạn Cần Access Token để truy cập APIs - Unauthorized (Token hết hạn, hoặc không hợp lệ, hoặc không truyền access token)",
+                message: TOKEN_ERROR_MESSAGE,
                 error: "Unauthorized"
             })
         }
     }
     catch (e) {
-        console.log(e);
-        return res.status(401).json({
-            statusCode: 401,
-            message: "Bạn Cần Access Token để truy cập APIs - Unauthorized (Token hết hạn, hoặc không hợp lệ, hoặc không truyền access token)",
-            error: "Unauthorized"
-        })
+        next(e);
     }
 }
 
-
-const updateCategory = async (req, res) => {
+export const deleteCategory = async (req, res, next) => {
     const token = req.headers.authorization;
-    const name = req.body;
-    try {
-        if (token) {
-            const access_token = token.split(" ")[1];
-            let decoded = jwt.verify(access_token, process.env.JWT_ACCESS_SECRET);
-            if (decoded) {
-                const response = await userService.getAllUserPaginate(name);
-                return res.status(200).json(response);
-            }
-        } else {
-            return res.status(401).json({
-                statusCode: 401,
-                message: "Bạn Cần Access Token để truy cập APIs - Unauthorized (Token hết hạn, hoặc không hợp lệ, hoặc không truyền access token)",
-                error: "Unauthorized"
-            })
-        }
-    }
-    catch (e) {
-        console.log(e);
-        return res.status(401).json({
+    const { id } = req.params;
+    if (!token) {
+        res.status(401).json({
             statusCode: 401,
-            message: "Bạn Cần Access Token để truy cập APIs - Unauthorized (Token hết hạn, hoặc không hợp lệ, hoặc không truyền access token)",
+            message: TOKEN_ERROR_MESSAGE,
             error: "Unauthorized"
-        })
+        });
     }
-}
 
-
-
-const deleteCategory = async (req, res) => {
     try {
-        const token = req.headers.authorization;
-        const { id } = req.params;
-        const response = await categoryService.deleteCategory(token, id);
-        return res.status(200).json(response)
+        const access_token = token.split(" ")[1];
+        const decoded = jwt.verify(access_token, process.env.JWT_ACCESS_SECRET);
+        if (!decoded) {
+            res.status(401).json({
+                statusCode: 401,
+                message: TOKEN_ERROR_MESSAGE,
+                error: "Unauthorized"
+            });
+        }
+
+        if (!id) {
+            res.status(400).json({
+                statusCode: 400,
+                message: "Không truyền đủ tham số"
+            });
+        }
+
+        const category = await db.Category.findByPk(id);
+
+        if (!category) {
+            res.status(400).json({
+                statusCode: 400,
+                message: `the category isn't exist`
+            });
+        }
+
+        const deletedCount = await db.Category.destroy({ where: { id } });
+
+        res.status(200).json({
+            statusCode: 200,
+            message: 'delete the category success!',
+            data: {
+                acknowledged: true,
+                deletedCount
+            }
+        });
     } catch (e) {
-        console.log(e);
-        return res.status(500).json({
-            statusCode: 500,
-            message: "đã có lỗi xảy ra!"
-        })
+        next(e);
     }
 }
 
-module.exports = {
-    createNewCategory,
-    getAllCategory,
-    getAllCategoryPaginate,
-    updateCategory,
-    deleteCategory
+
+export default {
+    createNewCategory, getAllCategory, getAllCategoryPaginate, updateCategory, deleteCategory
 }
